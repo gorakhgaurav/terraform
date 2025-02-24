@@ -1,32 +1,3 @@
-resource "google_container_cluster" "autopilot_cluster" {
-  name     = var.cluster_name
-  project  = var.project_id
-  location = var.region
-  network  = var.network
-  subnetwork = "projects/${var.network_project}/regions/${var.region}/subnetworks/${var.subnetwork}"
-
-  initial_node_count = var.initial_node_count
-  enable_autopilot   = true
-  deletion_protection = false
-  networking_mode = var.networking_mode
-  private_ipv6_google_access = "PRIVATE_IPV6_GOOGLE_ACCESS_DISABLED"
-
-  ip_allocation_policy {
-    cluster_secondary_range_name  = var.pods_secondary_range_name
-    services_secondary_range_name = var.services_secondary_range_name
-  }
-
-  control_plane_endpoints_config {
-    dns_endpoint_config {
-      allow_external_traffic = false
-    }
-  }
-
-  enterprise_config {
-    desired_tier = "ENTERPRISE"
-  }
-}
-
 # 🚀 Create a Pub/Sub Topic
 resource "google_pubsub_topic" "gke_topic" {
   name    = var.pubsub_topic_name
@@ -43,16 +14,6 @@ resource "google_pubsub_subscription" "gke_pull_subscription" {
   retry_policy {
     minimum_backoff = "10s"
     maximum_backoff = "600s"
-  }
-}
-
-# 🚀 Create a Push Subscription (Optional)
-resource "google_pubsub_subscription" "gke_push_subscription" {
-  name  = "${var.pubsub_subscription_name}-push"
-  topic = google_pubsub_topic.gke_topic.name
-
-  push_config {
-    push_endpoint = var.push_endpoint
   }
 }
 
