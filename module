@@ -1,0 +1,7 @@
+module "gkeflt_r_central1" {
+  source            = "./modules/pubsub"
+  project_id        = "your-gcp-project-id"
+  topic_name        = "my-topic"
+  subscription_name = "my-subscription"
+  service_account   = "my-service-account@your-gcp-project-id.iam.gserviceaccount.com"
+}
