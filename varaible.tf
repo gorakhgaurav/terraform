@@ -46,36 +46,36 @@ variable "zone" {
 #############Filestore#######
 
 variable "project_id" {
-  description = "The ID of the project in which to create the Filestore instance."
+  description = "The GCP project ID"
   type        = string
 }
 
 variable "filestore_name" {
-  description = "The name of the Filestore instance."
+  description = "The name of the Filestore instance"
   type        = string
 }
 
 variable "zone" {
-  description = "The zone in which to create the Filestore instance."
+  description = "The GCP zone where the Filestore instance will be created"
   type        = string
 }
 
 variable "tier" {
-  description = "The service tier of the Filestore instance (e.g., BASIC_HDD, BASIC_SSD)."
+  description = "The Filestore service tier (STANDARD, PREMIUM, ENTERPRISE)"
   type        = string
 }
 
 variable "network" {
-  description = "The name of the VPC network to which the Filestore instance is connected."
+  description = "The name of the VPC network to which the Filestore instance is connected"
   type        = string
 }
 
 variable "share_name" {
-  description = "The name of the file share."
+  description = "The name of the file share"
   type        = string
 }
 
 variable "capacity_gb" {
-  description = "The capacity of the file share in gigabytes."
+  description = "The storage capacity of the file share in GB"
   type        = number
 }
