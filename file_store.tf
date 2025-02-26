@@ -6,6 +6,7 @@ resource "google_filestore_instance" "filestore_instance" {
 
   networks {
     network = var.network
+    modes   = ["MODE_IPV4"] 
   }
 
   file_shares {
