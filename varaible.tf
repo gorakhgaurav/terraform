@@ -79,3 +79,8 @@ variable "capacity_gb" {
   description = "The storage capacity of the file share in GB"
   type        = number
 }
+variable "keys" {
+  description = "The full resource name of the KMS key used to encrypt the Filestore instance"
+  type        = string
+}
+
