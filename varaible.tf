@@ -84,3 +84,27 @@ variable "keys" {
   type        = string
 }
 
+######### RBAC
+
+
+
+variable "project_id" {
+  description = "GCP project ID"
+  type        = string
+}
+
+variable "region" {
+  description = "Region where GKE cluster is deployed"
+  type        = string
+}
+
+variable "gke_service_account" {
+  description = "Service account email for GKE nodes"
+  type        = string
+}
+
+variable "gke_admin_user" {
+  description = "User who will be given Kubernetes admin access"
+  type        = string
+}
+
