@@ -30,3 +30,9 @@ resource "google_pubsub_subscription_iam_member" "pubsub_subscriber" {
   role         = "roles/pubsub.subscriber"
   member       = "serviceAccount:${var.service_account}"
 }
+
+
+###### RBAC
+
+  gke_service_account = "gke-sa@my-gcp-project.iam.gserviceaccount.com"
+  gke_admin_user      = "admin-user@example.com"
