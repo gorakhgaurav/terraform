@@ -1,0 +1,106 @@
+provider "google" {
+  project = var.project_id
+  region  = var.region
+}
+
+# Cluster Role: Reader
+resource "kubernetes_cluster_role" "reader" {
+  metadata {
+    name = "clusterrole-reader"
+  }
+
+  rule {
+    api_groups = [
+      "config.istio.io",
+      "security.istio.io",
+      "networking.istio.io",
+      "authentication.istio.io",
+      "rbac.istio.io"
+    ]
+    resources = ["*"]
+    verbs     = ["get", "list", "watch"]
+  }
+
+  rule {
+    api_groups = [""]
+    resources = [
+      "endpoints", "pods", "services", "nodes", "replicationcontrollers",
+      "namespaces", "secrets"
+    ]
+    verbs = ["get", "list", "watch"]
+  }
+
+  rule {
+    api_groups = ["networking.istio.io"]
+    resources  = ["workloadentries"]
+    verbs      = ["get", "list", "watch"]
+  }
+
+  rule {
+    api_groups = ["apiextensions.k8s.io"]
+    resources  = ["customresourcedefinitions"]
+    verbs      = ["get", "list", "watch"]
+  }
+
+  rule {
+    api_groups = ["storage.k8s.io"]
+    resources = [
+      "csidrivers", "csinodes", "storageclasses",
+      "volumeattachments", "volumeattachments/status"
+    ]
+    verbs = ["get", "list", "watch"]
+  }
+}
+
+# Cluster Role: Admin
+resource "kubernetes_cluster_role" "admin" {
+  metadata {
+    name = "clusterrole-admin"
+  }
+
+  rule {
+    api_groups = [""]
+    resources = [
+      "pods", "pods/attach", "pods/exec", "pods/portforward", "pods/proxy"
+    ]
+    verbs = ["create", "delete", "deletecollection", "patch", "update"]
+  }
+}
+
+# Bind ClusterRole "reader" to a user or group
+resource "kubernetes_cluster_role_binding" "reader_binding" {
+  metadata {
+    name = "reader-role-binding"
+  }
+
+  role_ref {
+    api_group = "rbac.authorization.k8s.io"
+    kind      = "ClusterRole"
+    name      = kubernetes_cluster_role.reader.metadata[0].name
+  }
+
+  subject {
+    kind      = "User"
+    name      = "user@example.com"  # Change this to a real user or group
+    api_group = "rbac.authorization.k8s.io"
+  }
+}
+
+# Bind ClusterRole "admin" to a group
+resource "kubernetes_cluster_role_binding" "admin_binding" {
+  metadata {
+    name = "admin-role-binding"
+  }
+
+  role_ref {
+    api_group = "rbac.authorization.k8s.io"
+    kind      = "ClusterRole"
+    name      = kubernetes_cluster_role.admin.metadata[0].name
+  }
+
+  subject {
+    kind      = "Group"
+    name      = "devops-team"  # Change to an actual group
+    api_group = "rbac.authorization.k8s.io"
+  }
+}
