@@ -1,63 +1,125 @@
-resource "google_project_iam_binding" "gke_cluster_admin" {
+provider "google" {
   project = var.project_id
-  role    = "roles/container.admin"  # Full control over GKE
-
-  members = [
-    "user:${var.gke_admin_user}",
-    "serviceAccount:${var.gke_service_account}"
-  ]
+  region  = var.region
 }
 
-resource "google_container_cluster" "gke_cluster" {
-  name     = "my-gke-cluster"
-  location = var.region
-  project  = var.project_id
-
-  remove_default_node_pool = true
-  initial_node_count       = 1
-}
-
-resource "google_container_node_pool" "gke_node_pool" {
-  name       = "my-node-pool"
-  cluster    = google_container_cluster.gke_cluster.id
-  node_count = 2
-
-  node_config {
-    service_account = var.gke_service_account
-    oauth_scopes = [
-      "https://www.googleapis.com/auth/cloud-platform"
-    ]
-  }
-}
-
-resource "kubernetes_role" "gke_developer_role" {
+### Cluster Role: Reader ###
+resource "kubernetes_cluster_role" "reader" {
   metadata {
-    name      = "gke-developer"
-    namespace = "default"
+    name = "clusterrole-reader"
+  }
+
+  rule {
+    api_groups = [
+      "config.istio.io",
+      "security.istio.io",
+      "networking.istio.io",
+      "authentication.istio.io",
+      "rbac.istio.io"
+    ]
+    resources = ["*"]
+    verbs     = ["get", "list", "watch"]
   }
 
   rule {
     api_groups = [""]
-    resources  = ["pods", "services", "deployments"]
-    verbs      = ["get", "list", "create", "update", "delete"]
+    resources = [
+      "endpoints", "pods", "services", "nodes", "replicationcontrollers",
+      "namespaces", "secrets"
+    ]
+    verbs = ["get", "list", "watch"]
+  }
+
+  rule {
+    api_groups = ["networking.istio.io"]
+    resources  = ["workloadentries"]
+    verbs      = ["get", "list", "watch"]
+  }
+
+  rule {
+    api_groups = ["apiextensions.k8s.io"]
+    resources  = ["customresourcedefinitions"]
+    verbs      = ["get", "list", "watch"]
+  }
+
+  rule {
+    api_groups = ["storage.k8s.io"]
+    resources = [
+      "csidrivers", "csinodes", "storageclasses",
+      "volumeattachments", "volumeattachments/status"
+    ]
+    verbs = ["get", "list", "watch"]
   }
 }
 
-resource "kubernetes_role_binding" "gke_developer_role_binding" {
+### Cluster Role: Admin ###
+resource "kubernetes_cluster_role" "admin" {
   metadata {
-    name      = "gke-developer-binding"
-    namespace = "default"
+    name = "clusterrole-admin"
+  }
+
+  rule {
+    api_groups = [""]
+    resources = [
+      "pods", "pods/attach", "pods/exec", "pods/portforward", "pods/proxy",
+      "deployments", "services", "configmaps", "namespaces"
+    ]
+    verbs = ["create", "delete", "deletecollection", "patch", "update", "get", "list", "watch"]
+  }
+}
+
+### Bind ClusterRole "admin" to Group (Full Cluster Access) ###
+resource "kubernetes_cluster_role_binding" "admin_binding" {
+  metadata {
+    name = "admin-role-binding"
+  }
+
+  role_ref {
+    api_group = "rbac.authorization.k8s.io"
+    kind      = "ClusterRole"
+    name      = kubernetes_cluster_role.admin.metadata[0].name
   }
 
   subject {
-    kind      = "User"
-    name      = var.gke_admin_user
+    kind      = "Group"
+    name      = "devops-team"  # Change this to the actual admin group
+    api_group = "rbac.authorization.k8s.io"
+  }
+}
+
+### Bind ClusterRole "reader" to User Group for Multiple Namespaces ###
+resource "kubernetes_role" "namespace_reader" {
+  for_each = toset(var.namespaces)
+
+  metadata {
+    name      = "namespace-reader-role"
+    namespace = each.key
+  }
+
+  rule {
+    api_groups = [""]
+    resources  = ["pods", "services", "deployments", "configmaps", "secrets"]
+    verbs      = ["get", "list", "watch"]
+  }
+}
+
+resource "kubernetes_role_binding" "namespace_reader_binding" {
+  for_each = toset(var.namespaces)
+
+  metadata {
+    name      = "namespace-reader-binding"
+    namespace = each.key
+  }
+
+  subject {
+    kind      = "Group"
+    name      = "user-group"  # Change this to the actual user group
     api_group = "rbac.authorization.k8s.io"
   }
 
   role_ref {
     kind      = "Role"
-    name      = kubernetes_role.gke_developer_role.metadata[0].name
+    name      = kubernetes_role.namespace_reader[each.key].metadata[0].name
     api_group = "rbac.authorization.k8s.io"
   }
 }
