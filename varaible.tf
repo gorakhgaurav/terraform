@@ -107,4 +107,7 @@ variable "gke_admin_user" {
   description = "User who will be given Kubernetes admin access"
   type        = string
 }
-
+variable "namespaces" {
+  description = "List of namespaces for user-group read-only access"
+  type        = list(string)
+}
