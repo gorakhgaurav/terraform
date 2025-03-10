@@ -82,7 +82,7 @@ resource "kubernetes_cluster_role_binding" "admin_binding" {
 
   subject {
     kind      = "Group"
-    name      = "devops-team"  # Change this to the actual admin group
+    name      = "prc-axp-aa-e3-appadmin-gkepoc@aexp.com"  # Change this to the actual admin group
     api_group = "rbac.authorization.k8s.io"
   }
 }
@@ -113,7 +113,7 @@ resource "kubernetes_role_binding" "namespace_reader_binding" {
 
   subject {
     kind      = "Group"
-    name      = "user-group"  # Change this to the actual user group
+    name      = "prc-axp-gcp-e1-appuser-testapp@aexp.com"  # Change this to the actual user group
     api_group = "rbac.authorization.k8s.io"
   }
 
