@@ -1,0 +1,71 @@
+### GKE IAM Permissions ###
+resource "google_project_iam_binding" "gke_cluster_admin" {
+  project = var.project_id
+  role    = "roles/container.admin"  # Full GKE cluster control
+
+  members = [
+    "user:admin@gmail.com"
+  ]
+}
+
+resource "google_project_iam_binding" "gke_namespace_user" {
+  project = var.project_id
+  role    = "roles/container.viewer"  # Read-only access to GKE resources
+
+  members = [
+    "user:user@gmail.com"
+  ]
+}
+
+### Kubernetes Cluster Role for Full Admin ###
+resource "kubernetes_cluster_role_binding" "gke_admin" {
+  metadata {
+    name = "gke-cluster-admin-binding"
+  }
+
+  subject {
+    kind      = "User"
+    name      = "admin@gmail.com"
+    api_group = "rbac.authorization.k8s.io"
+  }
+
+  role_ref {
+    kind      = "ClusterRole"
+    name      = "cluster-admin"
+    api_group = "rbac.authorization.k8s.io"
+  }
+}
+
+### Kubernetes Role for Namespace-Level User ###
+resource "kubernetes_role" "namespace_user_role" {
+  metadata {
+    name      = "namespace-user-role"
+    namespace = var.namespace
+  }
+
+  rule {
+    api_groups = [""]
+    resources  = ["pods", "services", "deployments"]
+    verbs      = ["get", "list", "create", "update", "delete"]
+  }
+}
+
+### Kubernetes RoleBinding for Namespace-Level User ###
+resource "kubernetes_role_binding" "namespace_user_binding" {
+  metadata {
+    name      = "namespace-user-binding"
+    namespace = var.namespace
+  }
+
+  subject {
+    kind      = "User"
+    name      = "user@gmail.com"
+    api_group = "rbac.authorization.k8s.io"
+  }
+
+  role_ref {
+    kind      = "Role"
+    name      = kubernetes_role.namespace_user_role.metadata[0].name
+    api_group = "rbac.authorization.k8s.io"
+  }
+}
