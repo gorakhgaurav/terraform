@@ -18,6 +18,26 @@ resource "google_project_iam_binding" "gke_namespace_user" {
 }
 
 ### Kubernetes Cluster Role for Full Admin ###
+
+resource "kubernetes_cluster_role" "gke_admin_role" {
+  metadata {
+    name = "gke-cluster-admin"
+  }
+
+  rule {
+    api_groups = [""]
+    resources  = ["pods", "services", "deployments", "nodes", "namespaces"]
+    verbs      = ["get", "list", "watch", "create", "update", "delete"]
+  }
+
+  rule {
+    api_groups = ["rbac.authorization.k8s.io"]
+    resources  = ["roles", "rolebindings", "clusterroles", "clusterrolebindings"]
+    verbs      = ["get", "list", "watch", "create", "update", "delete"]
+  }
+}
+
+### Kubernetes Cluster Role Binding for Full Admin ###
 resource "kubernetes_cluster_role_binding" "gke_admin" {
   metadata {
     name = "gke-cluster-admin-binding"
