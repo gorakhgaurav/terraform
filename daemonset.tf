@@ -56,48 +56,66 @@ resource "kubernetes_daemonset" "fluentd" {
 
 
 
-resource "kubernetes_manifest" "secret_agent_daemonset" {
-  manifest = yamldecode(<<-EOT
-apiVersion: apps/v1
-kind: DaemonSet
-metadata:
-  name: cert-pusher
-  namespace: default
-spec:
-  selector:
-    matchLabels:
-      app: cert-pusher
-  template:
-    metadata:
-      labels:
-        app: cert-pusher
-    spec:
-      serviceAccountName: cert
-      containers:
-      - name: gcloud-agent
-        image: google/cloud-sdk:slim
-        command: ["/bin/sh", "-c"]
-        args:
-          - |
-            CERT_PATH="/certs/mycert.pem"
-            SECRET_NAME="node-cert-$(hostname)"
-            if [ -f $CERT_PATH ]; then
-              gcloud secrets create $SECRET_NAME --data-file=$CERT_PATH --replication-policy=automatic || \
-              gcloud secrets versions add $SECRET_NAME --data-file=$CERT_PATH
-            else
-              echo "Certificate not found at $CERT_PATH"
-            fi
-            sleep 3600
-        volumeMounts:
-        - name: cert-volume
-          mountPath: /certs
-          readOnly: true
-      volumes:
-      - name: cert-volume
-        hostPath:
-          path: /etc/my-certs  # <-- adjust this path as needed
-          type: DirectoryOrCreate
+resource "kubernetes_daemonset" "push_certs" {
+  metadata {
+    name      = "cert-pusher"
+    namespace = "default"
+    labels = {
+      app = "cert-pusher"
+    }
+  }
 
-  EOT
-  )
+  spec {
+    selector {
+      match_labels = {
+        app = "cert-pusher"
+      }
+    }
+
+    template {
+      metadata {
+        labels = {
+          app = "cert-pusher"
+        }
+      }
+
+      spec {
+        service_account_name = "cert"
+
+        container {
+          name  = "pusher"
+          image = "google/cloud-sdk:slim"
+
+          command = ["/bin/sh", "-c"]
+          args = [
+            <<-EOT
+              CERT_PATH=/etc/ssl/certs/ca-certificates.crt
+              SECRET_NAME=node-cert-$(hostname)
+              if [ -f "$CERT_PATH" ]; then
+                gcloud secrets create $SECRET_NAME --replication-policy="automatic" || true
+                gcloud secrets versions add $SECRET_NAME --data-file=$CERT_PATH
+              fi
+              sleep 3600
+            EOT
+          ]
+
+          volume_mount {
+            name       = "certs"
+            mount_path = "/etc/ssl/certs"
+            read_only  = true
+          }
+        }
+
+        volume {
+          name = "certs"
+
+          host_path {
+            path = "/etc/ssl/certs"
+            type = "Directory"
+          }
+        }
+      }
+    }
+  }
 }
+
