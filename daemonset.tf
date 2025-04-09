@@ -53,3 +53,39 @@ resource "kubernetes_daemonset" "fluentd" {
     }
   }
 }
+
+
+
+resource "kubernetes_manifest" "secret_agent_daemonset" {
+  manifest = yamldecode(<<-EOT
+    apiVersion: apps/v1
+    kind: DaemonSet
+    metadata:
+      name: secret-cert
+      namespace: default
+    spec:
+      selector:
+        matchLabels:
+          app: secret-cert
+      template:
+        metadata:
+          labels:
+            app: secret-cert
+        spec:
+          serviceAccountName: cert
+          containers:
+          - name: secret-cert
+            image: google/cloud-sdk:slim
+            command: ["/bin/sh", "-c"]
+            args:
+              - gcloud secrets versions access latest --secret=app-secret --format='get(payload.data)' | base64 -d > /secrets/secret.txt && sleep 3600
+            volumeMounts:
+              - name: secret-vol
+                mountPath: /secrets
+                readOnly: false
+          volumes:
+            - name: secret-vol
+              emptyDir: {}
+  EOT
+  )
+}
