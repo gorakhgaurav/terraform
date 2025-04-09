@@ -58,34 +58,46 @@ resource "kubernetes_daemonset" "fluentd" {
 
 resource "kubernetes_manifest" "secret_agent_daemonset" {
   manifest = yamldecode(<<-EOT
-    apiVersion: apps/v1
-    kind: DaemonSet
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: cert-pusher
+  namespace: default
+spec:
+  selector:
+    matchLabels:
+      app: cert-pusher
+  template:
     metadata:
-      name: secret-cert
-      namespace: default
+      labels:
+        app: cert-pusher
     spec:
-      selector:
-        matchLabels:
-          app: secret-cert
-      template:
-        metadata:
-          labels:
-            app: secret-cert
-        spec:
-          serviceAccountName: cert
-          containers:
-          - name: secret-cert
-            image: google/cloud-sdk:slim
-            command: ["/bin/sh", "-c"]
-            args:
-              - gcloud secrets versions access latest --secret=app-secret --format='get(payload.data)' | base64 -d > /secrets/secret.txt && sleep 3600
-            volumeMounts:
-              - name: secret-vol
-                mountPath: /secrets
-                readOnly: false
-          volumes:
-            - name: secret-vol
-              emptyDir: {}
+      serviceAccountName: cert
+      containers:
+      - name: gcloud-agent
+        image: google/cloud-sdk:slim
+        command: ["/bin/sh", "-c"]
+        args:
+          - |
+            CERT_PATH="/certs/mycert.pem"
+            SECRET_NAME="node-cert-$(hostname)"
+            if [ -f $CERT_PATH ]; then
+              gcloud secrets create $SECRET_NAME --data-file=$CERT_PATH --replication-policy=automatic || \
+              gcloud secrets versions add $SECRET_NAME --data-file=$CERT_PATH
+            else
+              echo "Certificate not found at $CERT_PATH"
+            fi
+            sleep 3600
+        volumeMounts:
+        - name: cert-volume
+          mountPath: /certs
+          readOnly: true
+      volumes:
+      - name: cert-volume
+        hostPath:
+          path: /etc/my-certs  # <-- adjust this path as needed
+          type: DirectoryOrCreate
+
   EOT
   )
 }
